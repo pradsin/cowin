@@ -42,7 +42,7 @@ all_districts = {622: 'Agra', 623: 'Aligarh', 625: 'Ambedkar Nagar', 626: 'Ameth
                  148: 'Shahdara', 149: 'South Delhi', 144: 'South East Delhi', 150: 'South West Delhi',
                  142: 'West Delhi'}
 
-districts_to_search = [650, 651, 145, 148, 144, 696, 670]
+districts_to_search = [650, 651, 145, 148, 144, 188, 696, 670]
 while True:
     available = []
     for district in districts_to_search:
@@ -82,19 +82,19 @@ while True:
         # json_formatted_str = json.dumps(available, indent=2)
         # print(json_formatted_str)
 
-        print("-" * 110)
-        print("{:<20} {:<20} {:<50} {:<7} {:<9}".format('state', 'district', 'address', 'pin', 'available'))
-        print("-" * 110)
         for center in available:
+            print("-" * 40)
             available_capacity = 0
+
             for session in center['sessions']:
                 available_capacity += int(session['available_capacity'])
-            print("{:20.20} {:20.20} {:50.50} {:<7} {:<9}".format(center['state_name'], center['district_name'],
-                                                                  center['address'], center['pincode'],
-                                                                  available_capacity))
-        print("-" * 110)
 
-        for i in range(20):
+            print('state:{}\ndistrict:{}\naddress:{}\npin:{}\navailable:{}'.format(center['state_name'],
+                                                                                   center['district_name'],
+                                                                                   center['address'],
+                                                                                   center['pincode'],
+                                                                                   available_capacity))
+        for i in range(40):
             playsound('C:\\Windows\\Media\\notify.wav')
             time.sleep(2)
     else:
