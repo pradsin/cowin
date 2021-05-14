@@ -21,64 +21,70 @@ from playsound import playsound
 import json
 import sys
 import time
+from datetime import date, datetime, timedelta
+import random
 
 read_from_file = False
 
-all_districts = {622: 'Agra', 623: 'Aligarh', 625: 'Ambedkar Nagar', 626: 'Amethi', 627: 'Amroha', 628: 'Auraiya',
-                 646: 'Ayodhya', 629: 'Azamgarh', 630: 'Badaun', 631: 'Baghpat', 632: 'Bahraich', 633: 'Balarampur',
-                 634: 'Ballia', 635: 'Banda', 636: 'Barabanki', 637: 'Bareilly', 638: 'Basti', 687: 'Bhadohi',
-                 639: 'Bijnour', 640: 'Bulandshahr', 641: 'Chandauli', 642: 'Chitrakoot', 643: 'Deoria', 644: 'Etah',
-                 645: 'Etawah', 647: 'Farrukhabad', 648: 'Fatehpur', 649: 'Firozabad', 650: 'Gautam Buddha Nagar',
-                 651: 'Ghaziabad', 652: 'Ghazipur', 653: 'Gonda', 654: 'Gorakhpur', 655: 'Hamirpur', 656: 'Hapur',
-                 657: 'Hardoi', 658: 'Hathras', 659: 'Jalaun', 660: 'Jaunpur', 661: 'Jhansi', 662: 'Kannauj',
-                 663: 'Kanpur Dehat', 664: 'Kanpur Nagar', 665: 'Kasganj', 666: 'Kaushambi', 667: 'Kushinagar',
-                 668: 'Lakhimpur Kheri', 669: 'Lalitpur', 670: 'Lucknow', 671: 'Maharajganj', 672: 'Mahoba',
-                 673: 'Mainpuri', 674: 'Mathura', 675: 'Mau', 676: 'Meerut', 677: 'Mirzapur', 678: 'Moradabad',
-                 679: 'Muzaffarnagar', 680: 'Pilibhit', 682: 'Pratapgarh', 624: 'Prayagraj', 681: 'Raebareli',
-                 683: 'Rampur', 684: 'Saharanpur', 685: 'Sambhal', 686: 'Sant Kabir Nagar', 688: 'Shahjahanpur',
-                 689: 'Shamli', 690: 'Shravasti', 691: 'Siddharthnagar', 692: 'Sitapur', 693: 'Sonbhadra',
-                 694: 'Sultanpur', 695: 'Unnao', 696: 'Varanasi', 141: 'Central Delhi', 145: 'East Delhi',
-                 140: 'New Delhi', 146: 'North Delhi', 147: 'North East Delhi', 143: 'North West Delhi',
-                 148: 'Shahdara', 149: 'South Delhi', 144: 'South East Delhi', 150: 'South West Delhi',
-                 142: 'West Delhi'}
+# Array of districts, put all nearby districts separated by comma
+districts_to_search = [650, 651, 652, 145, 148, 144]
+today = date.today().strftime("%d-%m-%Y")
+second = (date.today() + timedelta(days=7)).strftime("%d-%m-%Y")
+third = (date.today() + timedelta(days=14)).strftime("%d-%m-%Y")
+dates_to_search = [today]
+# dates_to_search.append(second)
+# dates_to_search.append(third)
+retry_after_seconds = [10, 20]
+alert_for_times = 1
 
-districts_to_search = [650, 651, 145, 148, 144, 188, 696, 670]
+
 while True:
     available = []
     for district in districts_to_search:
-
-        if read_from_file:
-            with open('C:\\Users\\prads\\Desktop\\Vaccine.json') as f:
-                vaccines = json.load(f)
-        else:
-            URL = 'https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id={district_id}&date={date}'
-            payload = {}
-            headers = {
-                'Accept': "*/*",
-                'User-Agent': 'gzip, deflate, br',
-                'PostmanRuntime/7.26.10': 'PostmanRuntime/7.26.10',
-                'Connection': 'keep-alive'
-            }
-
-            url = URL.format(district_id=district, date='09-05-2021')
-            response = requests.request('GET', url, data=payload, headers=headers)
-
-            if response.status_code == 200:
-                vaccines = response.json()
+        for date_to_search in dates_to_search:
+            if read_from_file:
+                with open('C:\\Users\\prads\\Desktop\\Vaccine.json') as f:
+                    vaccines = json.load(f)
             else:
-                continue
+                URL = 'https://cdn-api.co-vin.in/api/v2/appointment/sessions/calendarByDistrict?district_id={district_id}&date={date}'
+                payload = {}
+                headers = {
+                    'authority': 'cdn-api.co-vin.in',
+                    'pragma': 'no-cache',
+                    'cache-control': 'no-cache',
+                    'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="90", "Google Chrome";v="90"',
+                    'accept': 'application/json, text/plain, */*',
+                    'dnt': '1',
+                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX25hbWUiOiI1NzI4N2UzYy01ZDBjLTRiYTMtODk5ZC02YjEzNTFmNDkyNGQiLCJ1c2VyX2lkIjoiNTcyODdlM2MtNWQwYy00YmEzLTg5OWQtNmIxMzUxZjQ5MjRkIiwidXNlcl90eXBlIjoiQkVORUZJQ0lBUlkiLCJtb2JpbGVfbnVtYmVyIjo5ODczNDQxNzc4LCJiZW5lZmljaWFyeV9yZWZlcmVuY2VfaWQiOjY5NTk1OTU5MjU2NTUwLCJzZWNyZXRfa2V5IjoiYjVjYWIxNjctNzk3Ny00ZGYxLTgwMjctYTYzYWExNDRmMDRlIiwidWEiOiJNb3ppbGxhLzUuMCAoV2luZG93cyBOVCAxMC4wOyBXaW42NDsgeDY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvOTAuMC40NDMwLjkzIFNhZmFyaS81MzcuMzYiLCJkYXRlX21vZGlmaWVkIjoiMjAyMS0wNS0xMlQwNDoyMToxOC41NThaIiwiaWF0IjoxNjIwNzkzMjc4LCJleHAiOjE2MjA3OTQxNzh9.lQeJR586h9qQwTM9gy8CNMz7fva_cS79ZSRN3wMgYCc',
+                    'sec-ch-ua-mobile': '?0',
+                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36',
+                    'origin': 'https://selfregistration.cowin.gov.in',
+                    'sec-fetch-site': 'cross-site',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-dest': 'empty',
+                    'referer': 'https://selfregistration.cowin.gov.in/',
+                    'accept-language': 'en-US,en;q=0.9,hi;q=0.8'
+                }
 
-        for center in vaccines['centers']:
-            for session in center['sessions']:
-                min_age_limit = int(session['min_age_limit'])
-                if min_age_limit < 45:
-                    available_capacity = int(session['available_capacity'])
-                    if available_capacity > 2:
-                        available.append(center)
-                        slot_found = True
-                        break
+                url = URL.format(district_id=district, date=date_to_search)
+                response = requests.request('GET', url, data=payload, headers=headers)
+
+                if response.status_code == 200:
+                    vaccines = response.json()
+                else:
+                    print("E", end='')
+                    continue
+
+            for center in vaccines['centers']:
+                for session in center['sessions']:
+                    min_age_limit = int(session['min_age_limit'])
+                    if min_age_limit < 45:
+                        available_capacity = int(session['available_capacity'])
+                        if available_capacity > 9:
+                            available.append(center)
+                            slot_found = True
+                            break
     if len(available) > 0:
-
         # json_formatted_str = json.dumps(available, indent=2)
         # print(json_formatted_str)
 
@@ -89,23 +95,28 @@ while True:
             for session in center['sessions']:
                 available_capacity += int(session['available_capacity'])
 
-            print('state:{}\ndistrict:{}\naddress:{}\npin:{}\navailable:{}'.format(center['state_name'],
-                                                                                   center['district_name'],
-                                                                                   center['address'],
-                                                                                   center['pincode'],
-                                                                                   available_capacity))
-        for i in range(40):
-            playsound('C:\\Windows\\Media\\notify.wav')
-            time.sleep(2)
-    else:
-        print("no available slots found.")
+            now = datetime.now().time()
+            print('\ntime:{}\nstate:{}\ndistrict:{}\naddress:{}\npin:{}\navailable:{}'.format(now,
+                                                                                              center['state_name'],
+                                                                                              center['district_name'],
+                                                                                              center['address'],
+                                                                                              center['pincode'],
+                                                                                              available_capacity))
 
-    print("Sleeping for 30 seconds before trying again")
+        if len(available) > 0:
+            for i in range(alert_for_times):
+                playsound('C:\\Windows\\Media\\notify.wav')
+                time.sleep(1)
+
+    # else:
+    #     print("no available slots found.")
+    #
+    # print("Sleeping for {} seconds before trying again".format(retry_after_seconds))
 
     slot_found = False
 
-    for i in range(30):
+    for i in range(random.randint(retry_after_seconds[0], retry_after_seconds[1])):
         print('.', end='')
         sys.stdout.flush()
         time.sleep(1)
-    print('.')
+    print('-', end='')
